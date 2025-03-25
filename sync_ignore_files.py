@@ -17,6 +17,12 @@ GIT_SPECIFIC = {
     ".gitignore",
 }
 
+# Data files to ignore
+DATA_IGNORE = {
+    "data/feedback.json",
+    "data/welcome_book.json",
+}
+
 def read_file(filename):
     try:
         with open(filename, 'r') as f:
@@ -37,6 +43,9 @@ def main():
 
     # Create common set of ignore patterns
     common = (gitignore | dockerignore) - GIT_SPECIFIC - DOCKER_SPECIFIC
+
+    # Add data ignore patterns
+    common = common | DATA_IGNORE
 
     # Create final sets for each file
     git_patterns = common | GIT_SPECIFIC

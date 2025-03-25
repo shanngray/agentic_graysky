@@ -5,7 +5,7 @@ from models.content import Article
 from services.content_service import ContentService
 
 router = APIRouter()
-content_service = ContentService("src/app")  # Path to your Next.js app content
+content_service = ContentService()  # Use default path (data/content)
 
 @router.get("/", response_model=List[Article])
 async def get_articles(

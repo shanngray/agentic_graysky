@@ -45,7 +45,9 @@ example_usage.py
 plan.md
 security_review.md
 temp_notes.md
+test_api.py
 test_api_tool.py
+test_home.py
 uv-setup-notes.md
 uv.lock
 venv/

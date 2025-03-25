@@ -13,12 +13,10 @@ logger = logging.getLogger("graysky_api.content")
 
 class ContentService:
     def __init__(self, content_dir: str = None):
-        # Hardcode the relative path between projects
-        if content_dir is None or not os.path.exists(content_dir):
-            # Calculate the path: go up from current project, then to grayspace/src/app
+        # Use local data/content directory by default
+        if content_dir is None:
             current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Get agentic_graysky dir
-            parent_dir = os.path.dirname(current_dir)  # Get AI_projects dir
-            content_dir = os.path.join(parent_dir, "grayspace", "src", "app")
+            content_dir = os.path.join(current_dir, "data", "content")
         
         self.content_dir = Path(content_dir).resolve()
         # Validate that content directory exists
@@ -29,6 +27,10 @@ class ContentService:
         # Define safe base paths to prevent path traversal
         self.articles_path = self.content_dir / 'articles'
         self.projects_path = self.content_dir / 'projects'
+        
+        # Create directories if they don't exist
+        self.articles_path.mkdir(parents=True, exist_ok=True)
+        self.projects_path.mkdir(parents=True, exist_ok=True)
         
         # Directories to skip when scanning content
         self.skip_dirs = ['all', 'categories', '.git', 'node_modules']
@@ -91,22 +93,13 @@ class ContentService:
         articles = []
         
         try:
-            # Get directories that represent articles
-            for article_dir in self.articles_path.iterdir():
-                # Skip non-directories and special directories
-                if not article_dir.is_dir() or article_dir.name in self.skip_dirs or article_dir.name.startswith('.'):
+            # Get markdown files directly in the articles directory
+            for article_file in self.articles_path.glob('*.md'):
+                if not self._is_safe_path(article_file):
                     continue
                     
-                # Find the markdown file(s)
-                md_files = list(article_dir.glob('*.md'))
-                if not md_files:
-                    continue
-                    
-                # Use the most relevant markdown file
-                main_md_file = next((f for f in md_files if f.name == f"{article_dir.name}.md"), md_files[0])
-                
                 try:
-                    article_data = self._read_markdown_file(main_md_file)
+                    article_data = self._read_markdown_file(article_file)
                     metadata = article_data['metadata']
                     
                     # Extract article category if available
@@ -117,8 +110,8 @@ class ContentService:
                         continue
                         
                     articles.append(Article(
-                        title=metadata.get('title', main_md_file.name.replace('.md', '')),
-                        slug=article_data['slug'],
+                        title=metadata.get('title', article_file.stem),
+                        slug=article_file.stem,
                         content=article_data['content'],
                         date=datetime.fromisoformat(metadata.get('date', datetime.now().isoformat())),
                         category=article_category,
@@ -126,7 +119,7 @@ class ContentService:
                         summary=metadata.get('summary', None)
                     ))
                 except Exception as e:
-                    logger.error(f"Error processing article {article_dir.name}: {str(e)}")
+                    logger.error(f"Error processing article {article_file.name}: {str(e)}")
                     continue
         
             # Sort by date (newest first) and apply limit
@@ -144,24 +137,18 @@ class ContentService:
             logger.warning(f"Invalid slug format: {slug}")
             return None
             
-        article_path = self.articles_path / slug
+        article_path = self.articles_path / f"{slug}.md"
         
         if not self._is_safe_path(article_path) or not article_path.exists():
             return None
             
         try:
-            md_files = list(article_path.glob('*.md'))
-            if not md_files:
-                return None
-                
-            main_md_file = next((f for f in md_files if f.name == f"{slug}.md"), md_files[0])
-            
-            article_data = self._read_markdown_file(main_md_file)
+            article_data = self._read_markdown_file(article_path)
             metadata = article_data['metadata']
             
             return Article(
-                title=metadata.get('title', main_md_file.name.replace('.md', '')),
-                slug=article_data['slug'],
+                title=metadata.get('title', article_path.stem),
+                slug=article_path.stem,
                 content=article_data['content'],
                 date=datetime.fromisoformat(metadata.get('date', datetime.now().isoformat())),
                 category=metadata.get('category', None),
@@ -184,27 +171,18 @@ class ContentService:
         projects = []
         
         try:
-            # Get directories that represent projects
-            for project_dir in self.projects_path.iterdir():
-                # Skip non-directories and special directories
-                if not project_dir.is_dir() or project_dir.name in self.skip_dirs or project_dir.name.startswith('.'):
+            # Get markdown files directly in the projects directory
+            for project_file in self.projects_path.glob('*.md'):
+                if not self._is_safe_path(project_file):
                     continue
                     
-                # Find the markdown file(s)
-                md_files = list(project_dir.glob('*.md'))
-                if not md_files:
-                    continue
-                    
-                # Use the most relevant markdown file
-                main_md_file = next((f for f in md_files if f.name == f"{project_dir.name}.md"), md_files[0])
-                
                 try:
-                    project_data = self._read_markdown_file(main_md_file)
+                    project_data = self._read_markdown_file(project_file)
                     metadata = project_data['metadata']
                     
                     projects.append(Project(
-                        title=metadata.get('title', main_md_file.name.replace('.md', '')),
-                        slug=project_data['slug'],
+                        title=metadata.get('title', project_file.stem),
+                        slug=project_file.stem,
                         content=project_data['content'],
                         status=metadata.get('status', None),
                         technologies=metadata.get('technologies', []),
@@ -212,7 +190,7 @@ class ContentService:
                         demo_url=metadata.get('demo_url', None)
                     ))
                 except Exception as e:
-                    logger.error(f"Error processing project {project_dir.name}: {str(e)}")
+                    logger.error(f"Error processing project {project_file.name}: {str(e)}")
                     continue
         
             return projects[:limit]
@@ -228,24 +206,18 @@ class ContentService:
             logger.warning(f"Invalid slug format: {slug}")
             return None
             
-        project_path = self.projects_path / slug
+        project_path = self.projects_path / f"{slug}.md"
         
         if not self._is_safe_path(project_path) or not project_path.exists():
             return None
             
         try:
-            md_files = list(project_path.glob('*.md'))
-            if not md_files:
-                return None
-                
-            main_md_file = next((f for f in md_files if f.name == f"{slug}.md"), md_files[0])
-            
-            project_data = self._read_markdown_file(main_md_file)
+            project_data = self._read_markdown_file(project_path)
             metadata = project_data['metadata']
             
             return Project(
-                title=metadata.get('title', main_md_file.name.replace('.md', '')),
-                slug=project_data['slug'],
+                title=metadata.get('title', project_path.stem),
+                slug=project_path.stem,
                 content=project_data['content'],
                 status=metadata.get('status', None),
                 technologies=metadata.get('technologies', []),

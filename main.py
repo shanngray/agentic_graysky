@@ -16,7 +16,7 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler("api.log")
+        logging.FileHandler("/tmp/api.log")
     ]
 )
 logger = logging.getLogger("graysky_api")
