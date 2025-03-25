@@ -8,6 +8,7 @@ import time
 from starlette.middleware.base import BaseHTTPMiddleware
 import logging
 from health_check import health_router
+import os
 
 # Configure logging
 logging.basicConfig(
@@ -73,14 +74,16 @@ app = FastAPI(
 origins = [
     "http://localhost:3000",
     "https://graysky.ai",
-    "https://api.graysky.ai"
+    "https://api.graysky.ai",
+    "https://agentic-graysky.fly.dev",
+    "https://agents.graysky.ai"
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  # No wildcard with credentials
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST"],  # Restrict to necessary methods
+    allow_methods=["GET", "POST"],
     allow_headers=["Content-Type", "Authorization"],
 )
 
@@ -93,7 +96,14 @@ app.add_middleware(SecurityHeadersMiddleware)
 # Add trusted host middleware in production
 if not __debug__:  # Production mode
     app.add_middleware(
-        TrustedHostMiddleware, allowed_hosts=["graysky.ai", "api.graysky.ai", "localhost"]
+        TrustedHostMiddleware, 
+        allowed_hosts=[
+            "graysky.ai", 
+            "api.graysky.ai", 
+            "localhost",
+            "agentic-graysky.fly.dev",
+            "agents.graysky.ai"
+        ]
     )
 
 # Global exception handler
@@ -115,4 +125,6 @@ app.include_router(api_router)
 app.include_router(health_router)
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    # Use environment variable for port, default to 8080 for Fly.io
+    port = int(os.getenv("PORT", "8080"))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)

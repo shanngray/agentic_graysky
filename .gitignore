@@ -50,3 +50,4 @@ uv-setup-notes.md
 uv.lock
 venv/
 wheels/
+test_api.py
