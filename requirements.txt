@@ -12,4 +12,4 @@ types-requests>=2.31.0.2
 types-tabulate>=0.9.0.3
 # Required for API tool
 python-dotenv>=1.0.0
-openai-agents>=0.1.2
+openai-agents>=0.0.6
