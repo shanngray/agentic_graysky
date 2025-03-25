@@ -7,6 +7,7 @@ import uvicorn
 import time
 from starlette.middleware.base import BaseHTTPMiddleware
 import logging
+from health_check import health_router
 
 # Configure logging
 logging.basicConfig(
@@ -109,6 +110,9 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # Include API router
 app.include_router(api_router)
+
+# Include health check router
+app.include_router(health_router)
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

@@ -1,7 +1,7 @@
 # THIS FILE IS AUTO-GENERATED - DO NOT EDIT DIRECTLY
 # Use sync_ignore_files.py to update this file
 
-# Git
+# Docker
 # Logs
 # MacOS
 # Python
@@ -21,14 +21,14 @@
 *.so
 .DS_Store
 .Python
+.dockerignore
 .env
-.git
-.gitignore
 .mypy_cache/
 .pytest_cache/
 .venv
 .vscode/
 DEPLOYMENT_SUMMARY.md
+Dockerfile
 ENV/
 FLY_DEPLOYMENT_GUIDE.md
 README_API_TOOL.md
