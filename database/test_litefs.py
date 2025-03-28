@@ -10,6 +10,8 @@ import uuid
 import requests
 import time
 import pytest
+import socket
+import os
 from typing import Dict, Any
 
 # Configure logging
@@ -22,6 +24,23 @@ logging.basicConfig(
 )
 
 logger = logging.getLogger("graysky_api.database.test_litefs")
+
+def is_port_open(host: str, port: int) -> bool:
+    """
+    Check if a port is open on a given host.
+    
+    Args:
+        host: Host address
+        port: Port number
+        
+    Returns:
+        True if port is open, False otherwise
+    """
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(1)
+    result = sock.connect_ex((host, port))
+    sock.close()
+    return result == 0
 
 def add_test_visitor(host: str, port: int) -> Dict[str, Any]:
     """
@@ -83,9 +102,16 @@ def verify_visitor_on_replica(host: str, port: int, visitor_id: str) -> bool:
 @pytest.mark.parametrize(
     "primary_host,primary_port,replica_host,replica_port",
     [
-        ("localhost", 8080, "localhost", 8081),
+        (
+            os.environ.get("PRIMARY_HOST", "localhost"), 
+            int(os.environ.get("PRIMARY_PORT", "8080")),
+            os.environ.get("REPLICA_HOST", "localhost"), 
+            int(os.environ.get("REPLICA_PORT", "8081"))
+        ),
     ]
 )
+@pytest.mark.skipif(os.environ.get("ENABLE_LITEFS_TEST", "false").lower() != "true",
+                   reason="LiteFS replication test is disabled. Set ENABLE_LITEFS_TEST=true to enable.")
 def test_litefs_replication(primary_host: str, primary_port: int, 
                            replica_host: str, replica_port: int) -> None:
     """
@@ -97,8 +123,21 @@ def test_litefs_replication(primary_host: str, primary_port: int,
         replica_host: Replica node host
         replica_port: Replica node port
     """
+    # Check if the primary and replica servers are available
+    primary_available = is_port_open(primary_host, primary_port)
+    replica_available = is_port_open(replica_host, replica_port)
+    
+    if not primary_available or not replica_available:
+        servers_status = []
+        if not primary_available:
+            servers_status.append(f"primary server at {primary_host}:{primary_port}")
+        if not replica_available:
+            servers_status.append(f"replica server at {replica_host}:{replica_port}")
+            
+        pytest.skip(f"Skipping test because required servers are not available: {', '.join(servers_status)}")
+    
     try:
-        logger.info("Testing LiteFS replication...")
+        logger.info(f"Testing LiteFS replication from {primary_host}:{primary_port} to {replica_host}:{replica_port}...")
         
         # Add a visitor on the primary
         visitor = add_test_visitor(primary_host, primary_port)
