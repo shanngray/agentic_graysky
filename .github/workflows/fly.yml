@@ -6,8 +6,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
-    name: Run Tests
+  unit-test:
+    name: Run Unit Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -23,13 +23,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       
-      - name: Run tests
+      - name: Run unit tests
         run: |
-          python -m pytest -xvs
+          python tests/run_tests.py --types unit database
 
   deploy:
     name: Deploy to Fly.io
-    needs: test
+    needs: unit-test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -40,4 +40,34 @@ jobs:
       - name: Deploy to Fly.io
         run: flyctl deploy --remote-only
         env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }} 
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  health-check:
+    name: Post-Deployment Health Check
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Wait for deployment to complete
+        run: |
+          echo "Waiting for deployment to stabilize (30 seconds)..."
+          sleep 30
+      
+      - name: Run deployment health checks
+        run: |
+          export DEPLOYMENT_URL=https://agentic-graysky.fly.dev
+          python tests/run_tests.py --types health
+        env:
+          DEPLOYMENT_URL: https://agentic-graysky.fly.dev 
