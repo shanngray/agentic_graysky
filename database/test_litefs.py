@@ -9,6 +9,7 @@ import sys
 import uuid
 import requests
 import time
+import pytest
 from typing import Dict, Any
 
 # Configure logging
@@ -79,6 +80,12 @@ def verify_visitor_on_replica(host: str, port: int, visitor_id: str) -> bool:
     logger.info(f"Successfully verified visitor on replica: {visitor_id}")
     return True
 
+@pytest.mark.parametrize(
+    "primary_host,primary_port,replica_host,replica_port",
+    [
+        ("localhost", 8080, "localhost", 8081),
+    ]
+)
 def test_litefs_replication(primary_host: str, primary_port: int, 
                            replica_host: str, replica_port: int) -> None:
     """
@@ -99,7 +106,7 @@ def test_litefs_replication(primary_host: str, primary_port: int,
         
         if not visitor_id:
             logger.error("Failed to get visitor ID from response")
-            return
+            pytest.fail("Failed to get visitor ID from response")
             
         # Verify the visitor exists on the replica
         success = verify_visitor_on_replica(replica_host, replica_port, visitor_id)
@@ -108,10 +115,13 @@ def test_litefs_replication(primary_host: str, primary_port: int,
             logger.info("LiteFS replication test successful: Data written to primary is visible on replica")
         else:
             logger.error("LiteFS replication test failed: Data not properly replicated")
+            pytest.fail("LiteFS replication test failed: Data not properly replicated")
             
     except Exception as e:
         logger.error(f"Error testing LiteFS replication: {e}")
+        pytest.fail(f"Error testing LiteFS replication: {e}")
 
+# Keep the command-line interface for manual testing
 if __name__ == "__main__":
     # Parse command line arguments
     parser = argparse.ArgumentParser(description="Test LiteFS replication")
