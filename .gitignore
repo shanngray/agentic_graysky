@@ -52,6 +52,7 @@ uv-setup-notes.md
 uv.lock
 venv/
 wheels/
-data/graysky.db
 litefs.fly.yml
 litefs.local.yml
+test_data/
+*.db

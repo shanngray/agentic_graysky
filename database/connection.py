@@ -24,7 +24,24 @@ _local = threading.local()
 # Get the database path from environment variables
 def get_db_path() -> str:
     """Get the SQLite database path from environment variables."""
-    return os.environ.get('LITEFS_DB_PATH', '/var/lib/litefs/data/graysky.db')
+    # Priority order:
+    # 1. Explicit LITEFS_DB_PATH environment variable
+    # 2. For testing environments, use a local path
+    # 3. Default LiteFS path
+    if 'LITEFS_DB_PATH' in os.environ:
+        db_path = os.environ.get('LITEFS_DB_PATH')
+        return db_path if db_path is not None else '/var/lib/litefs/data/graysky.db'
+    
+    # Check if we're in a CI/test environment
+    if os.environ.get('CI') or os.environ.get('PYTEST_CURRENT_TEST'):
+        # Use a local test directory
+        test_dir = os.path.join(os.getcwd(), 'test_data')
+        if not os.path.exists(test_dir):
+            os.makedirs(test_dir, exist_ok=True)
+        return os.path.join(test_dir, 'test_graysky.db')
+    
+    # Default LiteFS path
+    return '/var/lib/litefs/data/graysky.db'
 
 def get_connection() -> sqlite3.Connection:
     """Get a SQLite connection from the thread-local pool."""
@@ -101,14 +118,23 @@ class DatabaseConnection:
         
     def _ensure_db_directory(self) -> None:
         """Ensure the database directory exists."""
-        # Skip directory creation for LiteFS mounts
-        if os.environ.get('LITEFS_MOUNTED'):
+        # Skip directory creation for LiteFS mounts when in production
+        if os.environ.get('LITEFS_MOUNTED') and not (os.environ.get('CI') or os.environ.get('PYTEST_CURRENT_TEST')):
             return
             
         db_dir = os.path.dirname(self.db_path)
         if db_dir and not os.path.exists(db_dir):
-            os.makedirs(db_dir, exist_ok=True)
-            logger.info(f"Created database directory: {db_dir}")
+            try:
+                os.makedirs(db_dir, exist_ok=True)
+                logger.info(f"Created database directory: {db_dir}")
+            except PermissionError:
+                logger.warning(f"Permission denied creating directory: {db_dir}")
+                # For test environments, fallback to a directory in the current working directory
+                if os.environ.get('CI') or os.environ.get('PYTEST_CURRENT_TEST'):
+                    test_dir = os.path.join(os.getcwd(), 'test_data')
+                    os.makedirs(test_dir, exist_ok=True)
+                    self.db_path = os.path.join(test_dir, os.path.basename(self.db_path))
+                    logger.info(f"Using test database path instead: {self.db_path}")
     
     def get_connection(self, for_write: bool = False) -> sqlite3.Connection:
         """
