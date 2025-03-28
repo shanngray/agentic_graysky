@@ -25,9 +25,11 @@ jobs:
       
       - name: Run unit tests
         run: |
-          # Add current directory to PYTHONPATH
-          export PYTHONPATH=$PYTHONPATH:$(pwd)
-          python tests/run_tests.py --types unit database
+          # Set up Python path properly
+          echo "Current directory: $(pwd)"
+          export PYTHONPATH=$(pwd)
+          # Run tests with proper module path
+          python -m tests.run_tests --types unit database
 
   deploy:
     name: Deploy to Fly.io

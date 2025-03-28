@@ -22,6 +22,9 @@ logger = logging.getLogger("test_runner")
 # Get project root directory
 PROJECT_ROOT = Path(__file__).parent.parent.absolute()
 
+# Add project root to Python path
+sys.path.insert(0, str(PROJECT_ROOT))
+
 def run_tests(test_types: Optional[List[str]] = None) -> int:
     """
     Run all tests for the API.
@@ -77,10 +80,25 @@ def run_tests(test_types: Optional[List[str]] = None) -> int:
         logger.info("Loading database tests...")
         database_tests_dir = os.path.join(PROJECT_ROOT, 'database', 'tests')
         if os.path.exists(database_tests_dir):
-            # Add the project root to sys.path to make imports work
-            sys.path.insert(0, str(PROJECT_ROOT))
-            database_tests = test_loader.discover(database_tests_dir, pattern='test_*.py')
-            test_suite.addTests(database_tests)
+            try:
+                # Load database tests individually
+                for file in Path(database_tests_dir).glob('test_*.py'):
+                    module_name = f"database.tests.{file.stem}"
+                    try:
+                        # Import the test module
+                        __import__(module_name)
+                        module = sys.modules[module_name]
+                        
+                        # Add all test cases from this module
+                        for name in dir(module):
+                            obj = getattr(module, name)
+                            if isinstance(obj, type) and issubclass(obj, unittest.TestCase) and obj != unittest.TestCase:
+                                test_suite.addTest(test_loader.loadTestsFromTestCase(obj))
+                                
+                    except (ImportError, AttributeError) as e:
+                        logger.error(f"Error loading test module {module_name}: {e}")
+            except Exception as e:
+                logger.error(f"Error discovering database tests: {e}")
         else:
             logger.warning(f"Database tests directory not found: {database_tests_dir}")
     
