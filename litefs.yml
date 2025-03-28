@@ -31,4 +31,4 @@ lease:
 
 # HTTP API for health checks and monitoring
 http:
-  addr: ":20202" 
+  addr: ":20202"
