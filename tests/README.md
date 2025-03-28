@@ -13,16 +13,20 @@ The tests are organized into several categories:
 
 ## Running Tests
 
-You can run all tests using the main test runner:
+You can run all tests using the main test runner or the Makefile:
 
 ```bash
+# Using the test runner directly
 python tests/run_tests.py
-```
 
-To run specific test categories:
+# Using Make
+make test
 
-```bash
-python tests/run_tests.py --types unit integration
+# Run specific test categories using Make
+make test-unit
+make test-integration
+make test-health
+make test-database
 ```
 
 Available test types:
@@ -32,14 +36,33 @@ Available test types:
 - `database`: Database tests
 - `all`: All test types (default)
 
-## Environment Variables
+## Test Configuration
 
-Tests can be configured with these environment variables:
+The project uses two configuration files for tests:
 
-- `TEST_SERVER_URL`: URL of the test server (default: http://localhost:8080)
-- `START_TEST_SERVER`: Whether to start a test server (default: True)
-- `DEPLOYMENT_URL`: URL of the deployed application for health checks
-- `DATABASE_PATH`: Path to the database file for testing
+1. `conftest.py` in the project root: Sets up the test environment with:
+   - Local database path configuration
+   - Environment variables for testing
+   - Various test fixtures
+
+2. `tests/run_tests.py`: Custom test runner that:
+   - Discovers and runs tests from different directories
+   - Allows running specific test categories
+   - Integrates with the CI/CD pipeline
+
+## Health Checks
+
+The project includes two health check components:
+
+1. `health_check.py`: API endpoint module that:
+   - Provides the `/health` endpoint for the API
+   - Checks database connectivity
+   - Reports system metrics and LiteFS status
+
+2. `scripts/health_check.py`: Standalone client script that:
+   - Can be run against any deployment
+   - Reports health status in text or JSON format
+   - Run using `make health-check` or `make health-check-prod`
 
 ## CI/CD Pipeline
 
@@ -54,4 +77,11 @@ The tests are integrated into the CI/CD pipeline:
 1. Create test files in the appropriate directory
 2. Follow the naming convention `test_*.py`
 3. Implement tests using the `unittest` framework
-4. Run the tests to verify they work as expected 
+4. Run the tests to verify they work as expected
+
+## Troubleshooting
+
+If tests fail with import errors:
+- Ensure `PYTHONPATH` includes the project root
+- Verify that `conftest.py` is correctly setting up the environment
+- Check if the test runner is finding the correct test files 

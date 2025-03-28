@@ -9,6 +9,7 @@ import sys
 import os
 import argparse
 import logging
+from pathlib import Path
 from typing import List, Optional
 
 # Configure logging
@@ -17,6 +18,9 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger("test_runner")
+
+# Get project root directory
+PROJECT_ROOT = Path(__file__).parent.parent.absolute()
 
 def run_tests(test_types: Optional[List[str]] = None) -> int:
     """
@@ -41,26 +45,44 @@ def run_tests(test_types: Optional[List[str]] = None) -> int:
     # Add unit tests
     if "unit" in test_types:
         logger.info("Loading unit tests...")
-        unit_tests = test_loader.discover('tests/unit', pattern='test_*.py')
-        test_suite.addTests(unit_tests)
+        unit_tests_dir = os.path.join(PROJECT_ROOT, 'tests', 'unit')
+        if os.path.exists(unit_tests_dir):
+            unit_tests = test_loader.discover(unit_tests_dir, pattern='test_*.py')
+            test_suite.addTests(unit_tests)
+        else:
+            logger.warning(f"Unit tests directory not found: {unit_tests_dir}")
     
     # Add integration tests
     if "integration" in test_types:
         logger.info("Loading integration tests...")
-        integration_tests = test_loader.discover('tests/integration', pattern='test_*.py')
-        test_suite.addTests(integration_tests)
+        integration_tests_dir = os.path.join(PROJECT_ROOT, 'tests', 'integration')
+        if os.path.exists(integration_tests_dir):
+            integration_tests = test_loader.discover(integration_tests_dir, pattern='test_*.py')
+            test_suite.addTests(integration_tests)
+        else:
+            logger.warning(f"Integration tests directory not found: {integration_tests_dir}")
     
     # Add health check tests
     if "health" in test_types:
         logger.info("Loading health check tests...")
-        health_tests = test_loader.discover('tests/health', pattern='test_*.py')
-        test_suite.addTests(health_tests)
+        health_tests_dir = os.path.join(PROJECT_ROOT, 'tests', 'health')
+        if os.path.exists(health_tests_dir):
+            health_tests = test_loader.discover(health_tests_dir, pattern='test_*.py')
+            test_suite.addTests(health_tests)
+        else:
+            logger.warning(f"Health tests directory not found: {health_tests_dir}")
     
     # Add database tests
     if "database" in test_types:
         logger.info("Loading database tests...")
-        database_tests = test_loader.discover('database/tests', pattern='test_*.py')
-        test_suite.addTests(database_tests)
+        database_tests_dir = os.path.join(PROJECT_ROOT, 'database', 'tests')
+        if os.path.exists(database_tests_dir):
+            # Add the project root to sys.path to make imports work
+            sys.path.insert(0, str(PROJECT_ROOT))
+            database_tests = test_loader.discover(database_tests_dir, pattern='test_*.py')
+            test_suite.addTests(database_tests)
+        else:
+            logger.warning(f"Database tests directory not found: {database_tests_dir}")
     
     # Run the tests
     test_runner = unittest.TextTestRunner(verbosity=2)

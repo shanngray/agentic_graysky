@@ -41,10 +41,15 @@ Tests can run in different environments:
 ### Local Development
 
 ```bash
-# Run all tests
-python tests/run_tests.py
+# Using the Makefile (recommended)
+make test              # Run all tests
+make test-unit         # Run unit tests
+make test-integration  # Run integration tests
+make test-health       # Run health checks
+make test-database     # Run database tests
 
-# Run specific test categories
+# Or using the test runner directly
+python tests/run_tests.py
 python tests/run_tests.py --types unit integration
 ```
 
@@ -57,12 +62,35 @@ The GitHub workflow runs tests automatically:
 
 ## Test Configuration
 
+The project uses a global `conftest.py` file in the project root to configure pytest and provide common fixtures:
+
+```python
+# Key fixtures provided:
+setup_test_environment  # Sets up environment variables for testing
+test_db_path            # Provides path to test database
+```
+
 Tests can be configured using environment variables:
 
-- `TEST_SERVER_URL`: URL of the test server
-- `START_TEST_SERVER`: Whether to start a test server
-- `DEPLOYMENT_URL`: URL of the deployed application
-- `DATABASE_PATH`: Path to the test database
+- `TEST_SERVER_URL`: URL of the test server (default: http://localhost:8080)
+- `LITEFS_DB_PATH`: Path to the test database file
+- `DATABASE_PATH`: Alias for the database path
+- `TESTING`: Flag to indicate test environment
+
+## Health Checks
+
+You can run health checks manually against any deployment:
+
+```bash
+# Check local development server
+make health-check
+
+# Check production deployment
+make health-check-prod
+
+# Using the script directly with custom URL
+python scripts/health_check.py --url https://your-deployment-url
+```
 
 ## Troubleshooting Common Issues
 
@@ -90,6 +118,14 @@ If health checks fail after deployment:
 2. Verify the health endpoint is accessible
 3. Check if the database is connected
 4. Look for error logs in Fly.io dashboard
+
+## Maintenance
+
+Regular test maintenance tasks:
+
+1. Run `make clean` to remove cached files and test artifacts
+2. Update test fixtures when database schema changes
+3. Review and update test environment variables as needed
 
 ## Continuous Improvement
 

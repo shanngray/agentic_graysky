@@ -25,6 +25,8 @@ jobs:
       
       - name: Run unit tests
         run: |
+          # Add current directory to PYTHONPATH
+          export PYTHONPATH=$PYTHONPATH:$(pwd)
           python tests/run_tests.py --types unit database
 
   deploy:
@@ -67,6 +69,8 @@ jobs:
       
       - name: Run deployment health checks
         run: |
+          # Add current directory to PYTHONPATH
+          export PYTHONPATH=$PYTHONPATH:$(pwd)
           export DEPLOYMENT_URL=https://agentic-graysky.fly.dev
           python tests/run_tests.py --types health
         env:
