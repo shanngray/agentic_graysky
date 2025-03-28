@@ -1,0 +1,34 @@
+fuse:
+  dir: "/var/lib/litefs"
+
+data:
+  dir: "/var/lib/litefs/data"
+  # Only use file-based approach when specified by environment
+  type: "${LITEFS_DATA_TYPE:-fuse}"
+
+exit-on-error: false
+
+proxy:
+  # The proxy listens on port 8080
+  addr: ":8080"
+  # The application running inside the container uses port 8081
+  target: "localhost:8081"
+  db: "/var/lib/litefs/data/graysky.db"
+
+lease:
+  type: "consul"
+  # Use environment variables to determine the advertise URL
+  advertise-url: "${LITEFS_ADVERTISE_URL:-http://${HOSTNAME}:20202}"
+  # Use environment variables to determine if this node can be a candidate
+  candidate: ${LITEFS_CANDIDATE:-${LITEFS_PRIMARY:-false}}
+  promote: true
+
+  consul:
+    url: "${FLY_CONSUL_URL}"
+    key: "${CONSUL_KEY:-litefs/agentic-graysky}"
+    ttl: "10s"
+    lock-delay: "1s"
+
+# HTTP API for health checks and monitoring
+http:
+  addr: ":20202" 

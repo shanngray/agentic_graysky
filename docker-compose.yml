@@ -1,0 +1,82 @@
+services:
+  primary:
+    build: .
+    ports:
+      - "8080:8080" # LiteFS proxy port
+      - "20202:20202" # LiteFS API port
+    environment:
+      - LITEFS_PRIMARY=true
+      - LITEFS_MOUNTED=true
+      - LITEFS_DB_PATH=/var/lib/litefs/data/graysky.db
+      - FLY_CONSUL_URL=http://consul:8500
+      - HOSTNAME=primary
+    volumes:
+      - litefs_primary:/var/lib/litefs
+    depends_on:
+      - consul
+    # Only use the minimal set of privileges required for FUSE
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - apparmor:unconfined
+    devices:
+      - /dev/fuse:/dev/fuse
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:20202/health" ]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    command: [ "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8081" ]
+
+  replica:
+    build: .
+    ports:
+      - "8081:8080" # LiteFS proxy port
+      - "20203:20202" # LiteFS API port
+    environment:
+      - LITEFS_PRIMARY=false
+      - LITEFS_MOUNTED=true
+      - LITEFS_DB_PATH=/var/lib/litefs/data/graysky.db
+      - FLY_CONSUL_URL=http://consul:8500
+      - HOSTNAME=replica
+    volumes:
+      - litefs_replica:/var/lib/litefs
+    depends_on:
+      - primary
+      - consul
+    # Only use the minimal set of privileges required for FUSE
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - apparmor:unconfined
+    devices:
+      - /dev/fuse:/dev/fuse
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:20202/health" ]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    command: [ "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8081" ]
+
+  consul:
+    image: hashicorp/consul:latest
+    ports:
+      - "8500:8500"
+    command: "agent -dev -client 0.0.0.0"
+    environment:
+      - CONSUL_BIND_INTERFACE=eth0
+      - CONSUL_CLIENT_INTERFACE=eth0
+      - CONSUL_ADVERTISE_ADDR=consul
+      - CONSUL_BIND_ADDR=0.0.0.0
+      - CONSUL_CLIENT_ADDR=0.0.0.0
+    healthcheck:
+      test: [ "CMD", "consul", "members" ]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  litefs_primary:
+  litefs_replica:

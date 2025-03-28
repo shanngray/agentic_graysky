@@ -9,6 +9,7 @@ from typing import List, Dict, Any, Optional
 from pathlib import Path
 
 from models.visitor import Visitor, VisitorCreate
+from models.feedback import Feedback
 
 class VisitorService:
     def __init__(self, data_file: str):
@@ -66,6 +67,21 @@ class VisitorService:
                 errors["answers"] = "Answers must be a dictionary"
             elif len(json.dumps(visitor.answers)) > 2000:  # Limit overall size
                 errors["answers"] = "Answers exceeded maximum allowed size"
+        
+        # Validate feedback if provided
+        if visitor.feedback:
+            if visitor.feedback.agent_name != visitor.name:
+                errors["feedback"] = "Feedback agent name must match visitor name"
+            if visitor.feedback.agent_type and len(visitor.feedback.agent_type) > self.max_field_length:
+                errors["feedback.agent_type"] = f"Feedback agent type must be less than {self.max_field_length} characters"
+            if visitor.feedback.issues and len(visitor.feedback.issues) > self.max_field_length:
+                errors["feedback.issues"] = f"Issues must be less than {self.max_field_length} characters"
+            if visitor.feedback.feature_requests and len(visitor.feedback.feature_requests) > self.max_field_length:
+                errors["feedback.feature_requests"] = f"Feature requests must be less than {self.max_field_length} characters"
+            if visitor.feedback.additional_comments and len(visitor.feedback.additional_comments) > self.max_field_length:
+                errors["feedback.additional_comments"] = f"Additional comments must be less than {self.max_field_length} characters"
+            if visitor.feedback.usability_rating is not None and (visitor.feedback.usability_rating < 1 or visitor.feedback.usability_rating > 5):
+                errors["feedback.usability_rating"] = "Usability rating must be between 1 and 5"
                 
         return errors
     
@@ -145,6 +161,19 @@ class VisitorService:
                 )
                 sanitized_answers[sanitized_key] = sanitized_value
         
+        # Sanitize feedback if present
+        sanitized_feedback = None
+        if visitor.feedback:
+            sanitized_feedback = {
+                "agent_name": self._sanitize_input(visitor.feedback.agent_name),
+                "agent_type": self._sanitize_input(visitor.feedback.agent_type) if visitor.feedback.agent_type else None,
+                "issues": self._sanitize_input(visitor.feedback.issues) if visitor.feedback.issues else None,
+                "feature_requests": self._sanitize_input(visitor.feedback.feature_requests) if visitor.feedback.feature_requests else None,
+                "usability_rating": visitor.feedback.usability_rating,
+                "additional_comments": self._sanitize_input(visitor.feedback.additional_comments) if visitor.feedback.additional_comments else None,
+                "submission_time": datetime.now().isoformat()
+            }
+        
         # Load existing data
         data = self._load_data()
         
@@ -181,7 +210,8 @@ class VisitorService:
             "purpose": sanitized_purpose,
             "visit_time": visit_time,
             "visit_count": visit_count,
-            "answers": sanitized_answers or {}
+            "answers": sanitized_answers or {},
+            "feedback": sanitized_feedback
         }
         
         data.append(new_visitor)
@@ -194,5 +224,6 @@ class VisitorService:
             purpose=sanitized_purpose,
             visit_time=datetime.fromisoformat(visit_time),
             visit_count=visit_count,
-            answers=sanitized_answers or {}
+            answers=sanitized_answers or {},
+            feedback=Feedback(**sanitized_feedback) if sanitized_feedback else None
         )

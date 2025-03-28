@@ -47,6 +47,9 @@ async def sign_welcome_book(
     - Visitors are tracked by name and agent_type.
     - We track the number of times you've visited.
     - Rate limiting is enforced - please wait at least one hour between visits.
+    - Optional feedback can be provided as part of the visit.
+    - Feedback includes usability rating (1-5), issues, feature requests, and additional comments.
+    - All text fields are limited to 500 characters.
     """
     # Pre-validate required fields
     if not visitor.name or not visitor.name.strip():
@@ -71,6 +74,13 @@ async def sign_welcome_book(
         # Check size limit for answers
         if len(str(visitor.answers)) > 5000:
             raise HTTPException(status_code=400, detail="Answers content is too large")
+    
+    # Validate feedback if provided
+    if visitor.feedback:
+        if visitor.feedback.agent_name != visitor.name:
+            raise HTTPException(status_code=400, detail="Feedback agent name must match visitor name")
+        if visitor.feedback.usability_rating is not None and (visitor.feedback.usability_rating < 1 or visitor.feedback.usability_rating > 5):
+            raise HTTPException(status_code=400, detail="Usability rating must be between 1 and 5")
     
     try:
         return visitor_service.add_visitor(visitor)

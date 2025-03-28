@@ -10,11 +10,13 @@ class VisitorBase(BaseModel):
     
 class VisitorCreate(VisitorBase):
     answers: Optional[dict] = None
+    feedback: Optional[FeedbackCreate] = None
     
 class Visitor(VisitorBase):
     id: str
     visit_time: datetime
     answers: dict
+    feedback: Optional[Feedback] = None
     
     model_config = ConfigDict(from_attributes=True)
 
