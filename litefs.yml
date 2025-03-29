@@ -19,7 +19,7 @@ lease:
   # Use environment variables to determine the advertise URL
   advertise-url: "http://${HOSTNAME}:20202"
   # Use environment variables to determine if this node can be a candidate
-  candidate: ${FLY_REGION == PRIMARY_REGION}
+  candidate: ${PRIMARY}
   promote: true
   consul:
     url: "${FLY_CONSUL_URL}"

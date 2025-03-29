@@ -20,14 +20,23 @@ if [ -z "${FLY_APP_NAME:-}" ]; then
     # Use hostname from Docker Compose
     export LITEFS_ADVERTISE_URL="http://${HOSTNAME:-localhost}:20202"
     export CONSUL_KEY="litefs/agentic-graysky-local-dev"
+    export PRIMARY="true"
 else
     log "Setting up for Fly.io environment"
     # Use standard FUSE mount on Linux
     export LITEFS_DATA_TYPE="fuse"
     # Use Fly.io internal networking
-    export LITEFS_ADVERTISE_URL="http://${FLY_ALLOC_ID}.vm.${FLY_APP_NAME}.internal:20202"
-    export LITEFS_CANDIDATE="${FLY_REGION:-local} == ${PRIMARY_REGION:-local}"
+    export LITEFS_ADVERTISE_URL="http://${HOSTNAME}:20202"
     export CONSUL_KEY="${FLY_APP_NAME}/primary"
+    
+    # Set PRIMARY environment variable based on region comparison
+    if [ "${FLY_REGION}" = "${PRIMARY_REGION}" ]; then
+        export PRIMARY="true"
+        log "This is a PRIMARY node (FLY_REGION=${FLY_REGION}, PRIMARY_REGION=${PRIMARY_REGION})"
+    else
+        export PRIMARY="false"
+        log "This is a REPLICA node (FLY_REGION=${FLY_REGION}, PRIMARY_REGION=${PRIMARY_REGION})"
+    fi
 fi
 
 # Ensure directories exist with appropriate permissions
@@ -82,7 +91,7 @@ if ! check_litefs_mounted; then
 fi
 
 # Initialize the database if we're the primary
-if [ "${LITEFS_PRIMARY:-false}" = "true" ]; then
+if [ "${PRIMARY:-false}" = "true" ]; then
     log "Primary node: initializing database if needed"
     if [ -f "/app/database/init_db.py" ]; then
         python -m database.init_db

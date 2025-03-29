@@ -15,6 +15,7 @@ primary_region = 'syd'
   LITEFS_DB_PATH = "/var/lib/litefs/data/graysky.db"
   LITEFS_MOUNTED = "true"
   FLY_APP_NAME = "agentic-graysky"
+  PRIMARY = "true"
 
 [http_service]
   internal_port = 8080
