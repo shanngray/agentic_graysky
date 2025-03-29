@@ -3,8 +3,7 @@ fuse:
 
 data:
   dir: "/var/lib/litefs/data"
-  # Only use file-based approach when specified by environment
-  type: "${LITEFS_DATA_TYPE:-fuse}"
+  type: "fuse"
 
 exit-on-error: false
 
@@ -18,14 +17,13 @@ proxy:
 lease:
   type: "consul"
   # Use environment variables to determine the advertise URL
-  advertise-url: "${LITEFS_ADVERTISE_URL:-http://${HOSTNAME}:20202}"
+  advertise-url: "http://${HOSTNAME}:20202"
   # Use environment variables to determine if this node can be a candidate
-  candidate: ${LITEFS_CANDIDATE:-${LITEFS_PRIMARY:-false}}
+  candidate: ${FLY_REGION == PRIMARY_REGION}
   promote: true
-
   consul:
     url: "${FLY_CONSUL_URL}"
-    key: "${CONSUL_KEY:-litefs/agentic-graysky}"
+    key: "litefs/agentic-graysky"
     ttl: "10s"
     lock-delay: "1s"
 
